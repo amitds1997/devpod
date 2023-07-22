@@ -16,6 +16,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
+	"github.com/loft-sh/devpod/pkg/ide/neovim"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	provider2 "github.com/loft-sh/devpod/pkg/provider"
@@ -108,6 +109,8 @@ func (cmd *SetupContainerCmd) installIDE(setupInfo *config.Result, workspaceInfo
 		return cmd.setupVSCode(setupInfo, workspaceInfo, log)
 	case string(config2.IDEOpenVSCode):
 		return cmd.setupOpenVSCode(setupInfo, workspaceInfo, log)
+	case string(config2.IDENeovim):
+		return cmd.setupNeovim(setupInfo, workspaceInfo, log)
 	case string(config2.IDEGoland):
 		return jetbrains.NewGolandServer(config.GetRemoteUser(setupInfo), workspaceInfo.Workspace.IDE.Options, log).Install()
 	case string(config2.IDEPyCharm):
@@ -225,4 +228,19 @@ func (cmd *SetupContainerCmd) setupOpenVSCode(setupInfo *config.Result, workspac
 
 	// start the server in the background
 	return openVSCode.Start()
+}
+
+func (cmd *SetupContainerCmd) setupNeovim(setupInfo *config.Result, workspaceInfo *provider2.AgentWorkspaceInfo, log log.Logger) error {
+	log.Debugf("Setup neovim...")
+
+	user := config.GetRemoteUser(setupInfo)
+	openNeovim := neovim.NewNeovimServer(user, "0.0.0.0", strconv.Itoa(neovim.DefaultNeovimPort), workspaceInfo.Workspace.IDE.Options, log)
+
+	// Install Neovim
+	err := openNeovim.Install()
+	if err != nil {
+		return err
+	}
+
+	return openNeovim.Start(setupInfo.SubstitutionContext.ContainerWorkspaceFolder)
 }

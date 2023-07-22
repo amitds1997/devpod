@@ -21,6 +21,7 @@ export type TSettings = {
   experimental_multiDevcontainer: boolean
   experimental_fleet: boolean
   experimental_jupyterNotebooks: boolean
+  experimental_neovim: boolean
 }
 type TSetting = keyof TSettings
 
@@ -40,6 +41,7 @@ const initialSettings: TSettings = {
   experimental_multiDevcontainer: false,
   experimental_fleet: true,
   experimental_jupyterNotebooks: true,
+  experimental_neovim: true,
 }
 function getSettingKeys(): readonly TSetting[] {
   return getKeys(initialSettings)

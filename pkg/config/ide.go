@@ -16,4 +16,5 @@ const (
 	IDEWebStorm        IDE = "webstorm"
 	IDEFleet           IDE = "fleet"
 	IDEJupyterNotebook IDE = "jupyternotebook"
+	IDENeovim          IDE = "nvim"
 )

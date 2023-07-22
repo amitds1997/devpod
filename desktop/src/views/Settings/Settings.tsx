@@ -165,6 +165,11 @@ export function Settings() {
             onChange={(e) => set("experimental_jupyterNotebooks", e.target.checked)}>
             Jupyter Notebooks
           </Checkbox>
+          <Checkbox
+            isChecked={settings.experimental_neovim}
+            onChange={(e) => set("experimental_neovim", e.target.checked)}>
+            Neovim
+          </Checkbox>
         </VStack>
 
         <Divider />

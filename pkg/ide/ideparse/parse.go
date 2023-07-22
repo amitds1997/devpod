@@ -12,6 +12,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
+	"github.com/loft-sh/devpod/pkg/ide/neovim"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	"github.com/loft-sh/devpod/pkg/provider"
@@ -114,6 +115,14 @@ var AllowedIDEs = []AllowedIDE{
 		Options:      jupyter.Options,
 		Icon:         "https://devpod.sh/assets/jupyter.svg",
 		IconDark:     "https://devpod.sh/assets/jupyter_dark.svg",
+		Experimental: true,
+	},
+	{
+		Name:         config.IDENeovim,
+		DisplayName:  "Neovim",
+		Options:      neovim.Options,
+		Icon:         "https://raw.githubusercontent.com/neovim/neovim/master/runtime/nvim.png",
+		IconDark:     "https://raw.githubusercontent.com/neovim/neovim/master/runtime/nvim.png",
 		Experimental: true,
 	},
 }

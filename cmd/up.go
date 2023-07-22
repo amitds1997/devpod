@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/loft-sh/log/terminal"
 	"io"
 	"net"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/loft-sh/devpod/cmd/flags"
 	"github.com/loft-sh/devpod/pkg/agent"
@@ -22,6 +24,7 @@ import (
 	"github.com/loft-sh/devpod/pkg/ide/fleet"
 	"github.com/loft-sh/devpod/pkg/ide/jetbrains"
 	"github.com/loft-sh/devpod/pkg/ide/jupyter"
+	"github.com/loft-sh/devpod/pkg/ide/neovim"
 	"github.com/loft-sh/devpod/pkg/ide/openvscode"
 	"github.com/loft-sh/devpod/pkg/ide/vscode"
 	open2 "github.com/loft-sh/devpod/pkg/open"
@@ -185,6 +188,8 @@ func (cmd *UpCmd) Run(ctx context.Context, devPodConfig *config.Config, client c
 			return startFleet(ctx, client, log)
 		case string(config.IDEJupyterNotebook):
 			return startJupyterNotebookInBrowser(ctx, devPodConfig, client, user, ideConfig.Options, log)
+		case string(config.IDENeovim):
+			return startNeovimLocally(ctx, devPodConfig, client, result.SubstitutionContext.ContainerWorkspaceFolder, user, ideConfig.Options, log)
 		}
 	}
 
@@ -611,4 +616,59 @@ func createSSHCommand(ctx context.Context, client client2.BaseWorkspaceClient, l
 	args = append(args, extraArgs...)
 
 	return exec.CommandContext(ctx, execPath, args...), nil
+}
+
+func startNeovimLocally(ctx context.Context, devPodConfig *config.Config, client client2.BaseWorkspaceClient, workspaceFolder, user string, ideOptions map[string]config.OptionValue, logger log.Logger) error {
+	// determine port
+	neovimAddress, neovimPort, err := parseAddressAndPort(neovim.Options.GetValue(ideOptions, neovim.BindAddressOption), neovim.DefaultNeovimPort)
+	if err != nil {
+		return err
+	}
+
+	targetURL := fmt.Sprintf("localhost:%d", neovimPort)
+
+	// Wait until the server becomes reachable
+	go func() {
+		if neovim.Options.GetValue(ideOptions, neovim.OpenOption) == "true" {
+			// Check whether we are running in a terminal
+			if terminal.IsTerminalIn {
+				// TODO: Do not wait indefinitely
+				logger.Infof("Running inside a terminal, waiting for nvim to start...")
+				for {
+					conn, _ := net.DialTimeout("tcp", targetURL, 30*time.Second)
+					if conn != nil {
+						conn.Close()
+						break
+					}
+				}
+
+				// Time for Neovim to launch
+				cmd := exec.Command("nvim", "--server", targetURL, "--remote-ui")
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				cmd.Stdin = os.Stdin
+				cmd.Env = os.Environ()
+				err = cmd.Run()
+				if err != nil {
+					logger.Errorf("error starting nvim: %v", err)
+				}
+			} else {
+				logger.Infof("Not running in a terminal so you would have to start nvim manually. Do nvim --server %s --remote-ui", targetURL)
+			}
+		}
+	}()
+
+	// Forward remote server port out into the world
+	forwardPorts := neovim.Options.GetValue(ideOptions, neovim.ForwardPortsOption) == "true"
+	extraPorts := []string{fmt.Sprintf("%s:%d", neovimAddress, neovim.DefaultNeovimPort)}
+	return startBrowserTunnel(
+		ctx,
+		devPodConfig,
+		client,
+		user,
+		targetURL,
+		forwardPorts,
+		extraPorts,
+		logger,
+	)
 }
